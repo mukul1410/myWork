@@ -1,0 +1,407 @@
+#define FONT_NAME "GP45_ArabCJK_TouchWiz"
+#define BLACK 0 0 0 255
+#define X 0.0 0.0
+#define BALL_SPEED 10.0
+#define BALL_SIZE 30
+#define PAD_SIZE 100
+#define FPS 30
+
+images {
+
+image: "ball.png" COMP;
+
+}
+
+collections {
+   group { name: "main";
+   
+   script {
+   
+   public ballx,bally;
+   public ballspeedx,ballspeedy;
+   public current_score;
+   public lives;
+   public t;
+   
+   public start()
+   {
+		set_float(ballspeedx, BALL_SPEED);
+		set_float(ballspeedy, BALL_SPEED);
+		set_float(ballx, 10);
+		set_float(bally, 10);
+		set_float(current_score, 0);
+		set_float(lives, 3);
+   }
+   
+   public getBallPos(dir)
+   {
+	 new tx,ty,tw,th;
+	 new fx,fy,fw,fh;
+	 new px,py,pw,ph;
+	 get_geometry(PART:"ball",tx,ty,tw,th);
+	 get_geometry(PART:"background",fx,fy,fw,fh);
+	 get_geometry(PART:"pad",px,py,pw,ph);
+	 
+	new Float:bx = get_float(ballx);
+	new Float:by = get_float(bally);
+	new Float:speedx = get_float(ballspeedx);
+	new Float:speedy = get_float(ballspeedy);
+	new Float:sc = get_float(current_score);
+	bx=bx+speedx;
+	by=by+speedy;
+	
+		if (bx < 0)
+		{
+			speedx = -speedx;
+			bx = 0;
+		}
+		else if (bx + BALL_SIZE + 10  > 2*fw)
+		{
+			speedx = -speedx;
+			bx = 2*fw - BALL_SIZE - 10;
+		}
+		
+		
+		if (by < 0)
+		{
+			speedy = -speedy;
+			by = 0;
+		}
+		
+		else if((speedy > 0) && (bx + 2*BALL_SIZE > 2*px) && (bx < 2*px + 160)  &&  ( by > 2*fh - BALL_SIZE- 40) && (by < 2*fh - BALL_SIZE ))
+		{
+			speedy = -(speedy+2);
+			speedx=speedx+2;
+			sc=sc+1.0;
+			by = 2*fh - ph - BALL_SIZE - 30;
+		}
+		else if (by + BALL_SIZE + 30  > 2*fh)
+		{
+			speedy = -speedy;
+			sc=sc-1.0;
+			new Float:l=get_float(lives);
+			l=l-1.0;
+			set_float(lives,l);
+			//alertLives();
+			by = 2*fh - BALL_SIZE - 30;
+		}
+		
+		
+		
+		
+		
+	custom_state(PART:"ball", "default", 0.0);
+	set_state_val(PART:"ball", STATE_REL1_OFFSET, round (bx), round(by));
+	set_state_val(PART:"ball", STATE_MIN, BALL_SIZE, BALL_SIZE);
+	set_state_val(PART:"ball", STATE_MAX, BALL_SIZE, BALL_SIZE);
+	set_state(PART:"ball", "custom", 0.0);
+	new str[100];
+	 snprintf(str,sizeof(str),"%f  %f %d  %d %d ",bx,by,2*px,fw,fh);
+	 new tmp[100];
+	 snprintf(tmp,sizeof(tmp),"%d",round(sc));
+	  set_text(PART:"ball_position",str);
+	  set_text(PART:"score",tmp);
+	  set_float(ballspeedx,speedx);
+	  set_float(ballx,bx);
+	  set_float(ballspeedy,speedy);
+	  set_float(bally,by);
+	  set_float(current_score,sc);
+	  if(dir==1)
+	  cancel_timer(t);
+	  t=timer(1/FPS, "getBallPos",dir);
+	  
+   }//end getBallPos
+   
+   
+   public movePad()
+   {
+		new mx,my;
+		new fx,fy,fw,fh;
+		get_mouse(mx,my);
+		get_geometry(PART:"background",fx,fy,fw,fh);
+		custom_state(PART:"pad", "default", 0.0);
+		new padx=2*mx-PAD_SIZE;
+		if(padx < 0)
+		padx=-10;
+		else if(mx + PAD_SIZE + 10> fw)
+		padx=2*mx-PAD_SIZE; 
+		
+		set_state_val(PART:"pad", STATE_REL1_OFFSET, round(padx), 30);	
+		set_state_val(PART:"pad", STATE_MIN,PAD_SIZE, 30);
+		set_state_val(PART:"pad", STATE_MAX,PAD_SIZE, 30);
+		set_state(PART:"pad", "custom", 0.0);
+		new str[100];
+		snprintf(str,sizeof(str),"%d %d  %d",mx,my, padx);
+		set_text(PART:"ball_position",str);
+		//timer(1/45, "getBallPos",0);
+   }
+   
+  
+    public alertLives()
+	{
+		new str[100];
+		new Float:liv=get_float(lives);
+		if(round(liv)==0)
+		snprintf(str,sizeof(str)," Game Over");
+		else
+		snprintf(str,sizeof(str),"%d lives left", liv);
+		custom_state(PART:"button_text","default", 0.0);
+		custom_state(PART:"ball","default", 0.0);
+		custom_state(PART:"button","default", 0.0);
+		set_text(PART:"button_text",str);
+		set_state_val(PART:"button_text", STATE_VISIBLE, 1);
+		set_state_val(PART:"button", STATE_VISIBLE, 1);
+		set_state(PART:"ball", "default", 0.0);
+		set_state(PART:"button_text", "custom", 0.0);
+		set_state(PART:"button", "custom", 0.0);
+		snprintf(str,sizeof(str),"false");
+		timer(1/45,"getBallPos",1);
+	}
+  
+   }//end script
+   
+      parts {
+         part { name: "background";
+            type: RECT;
+			mouse_events: 1;
+            description {
+               state: "default" 0.0;
+               color: 255 255 255 255;
+			   rel1.relative:0.0 0.0;
+			   rel2.relative: 1.0 1.0;
+            }
+         }
+         
+		 
+		 part {
+		 name: "score";
+		 type: TEXT;
+		 description {
+		 state: "default" 0.0;
+		 color: BLACK;
+		 rel1.relative: 0.5 0.0;
+		 rel2.relative: 0.6 0.1;
+		 text {
+		 font: FONT_NAME;
+		 size: 25;
+		 text: 0;
+		 } //end text
+		 }//end default description
+		 
+		 
+		 }//end score part
+		 
+		 part {
+		 
+		 name: "ball";
+		 type: IMAGE;
+		 mouse_events: 1;
+		 description {
+		 state: "default" 0.0;
+		 //min: 30 30;
+		 //max: 30 30;
+		 rel1.relative: 0.0 0.0;
+		 rel1.to: "background";
+		 rel2.relative: 0.05 0.05;
+		 rel2.to: "background";
+		 image.normal: "ball.png";
+		 
+		 }// end default ball description
+		 
+		 
+		 
+		 
+		 } //end ball part
+		 
+		 
+		 part {
+		 name: "button";
+		 type: RECT;
+		 mouse_events: 1;
+		 description {
+		 state: "default" 0.0;
+		 rel1.relative: 0.0 0.3;
+		 rel2.relative: 1.0 0.6;
+		 color: 3 16 81 255;
+		 visible: 1;
+		 }//end default description;
+		 
+		 description {
+		 state: "hide" 0.0;
+		 inherit: "default";
+		 visible: 0;
+		 
+		 }//end hide description
+		 
+		 
+		 }//end button part
+		 
+		 
+		 
+		 part {
+		 
+		 name: "button_text";
+		 type: TEXT;
+		 mouse_events: 1;
+		 description {
+		 state: "default" 0.0;
+		 color: 255 255 255 255;
+		 visible: 1;
+		 rel1 {
+		 relative: 0.2 0.3;
+		 to: "button";
+		 }//end rel1
+		 
+		 rel2 {
+		 relative: 0.8 0.6;
+		 to: "button";
+		 }//end rel2
+		 
+		 text {
+		 text: "Play";
+		 font: FONT_NAME;
+		 size: 25;
+		 }
+		 }//end default description
+		 
+		 description {
+		 state: "hide" 0.0;
+		 inherit: "default";
+		 visible: 0;
+		 
+		 }//end hide description
+		 
+		 description {
+		 state: "replay" 0.0;
+		 inherit: "default";
+		 text {
+		 text: "Replay Animation";
+		 font: FONT_NAME;
+		 size: 45;
+		 }
+		 
+		 
+		 }//end replay description
+		 
+		 }//end button_text
+		 
+		 
+		 part {
+		 
+		 name: "ball_position";
+		 type: TEXT;
+		 description {
+		 state: "default" 0.0;
+		 rel1.relative: 0.2 0.95;
+		 rel2.relative: 0.8 0.95;
+		 color: BLACK;
+		 text {
+		 text: "Hello";
+		 font: FONT_NAME;
+		 size: 15;
+		 }
+		 }//end default description
+		 
+		 }//end ball_position part
+		 
+		 
+		 part {
+		 name: "pad";
+		 type: RECT;
+		 description {
+		 state: "default" 0.0;
+		 rel1.relative:0.0 0.97;
+		 rel2.relative: 0.25 1.0;  	
+		 color: BLACK;
+		 //min: 50 50;
+		 //max: 80 50;
+		 }//end default description
+		 
+		 
+		 }// end pad
+		 
+      }// end parts
+	  
+	  
+	  programs {
+	  
+	  program {
+	  name: "init";
+	  signal: "load";
+	  source:"";
+	  script {
+	  start();
+	  }
+	  
+	  
+	  }//end init
+	
+	  
+	  program {
+	  name: "button_click";
+	  signal: "mouse,down,1";
+	  source: "button";
+	  source: "button_text";
+	  action: STATE_SET "hide" 0.0;
+	  target: "button";
+	  target: "button_text";
+	  after: "animate";
+	  }//end button_click;
+	  
+	 
+	   program {
+	  name : "animate";
+	  signal: "start";
+	  source: "";
+	  script {
+		
+	   getBallPos(0);
+	  }
+	  
+	  
+	  }// end animate
+	  
+	  
+	   program {
+	  name : "restart";
+	  action: STATE_SET "default" 0.0;
+	  target: "button";
+	  after: "restart2";
+	  
+	  
+	  }// end restart
+	  
+	  
+	  program {
+	  name : "restart2";
+	  action: STATE_SET "replay" 0.0;
+	  target: "button_text";
+	  after: "restart3";
+	  
+	  
+	  }// end restart
+	  
+	  
+	  program {
+	  name : "restart3";
+	  action: STATE_SET "default" 0.0;
+	  target: "ball";
+	  //after: "animate";
+	  
+	  
+	  }// end restart
+	  
+	  
+	  
+	  program {
+	  name: "move_pad";
+	  signal: "mouse,down,1";
+	  source: "background";
+	  script {
+		movePad();
+	  }
+	  }
+	  
+	  }//end programs
+   }// end group
+}// end collections
